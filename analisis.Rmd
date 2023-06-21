@@ -1,0 +1,466 @@
+---
+title: "Análisis de datos de comercio electrónico"
+author: 
+  - Allan Martínez
+  - Brenda Fonseca
+  - Lindey Carvajal
+  - Patrick Santamaría
+date: "20 de julio de 2023"
+always_allow_html: yes
+output:
+  rmdformats::downcute:
+    fig_width: 12
+    fig_height: 6
+    use_bookdown: true
+    number_sections: false
+editor_options:
+  chunk_output_type: console
+---
+
+# Cargar paquetes
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# Carga de paquetes ------------------------------------------------------------
+library(tidyverse)
+library(tidymodels)
+library(janitor)
+library(gt)
+library(kernlab)
+library(xgboost)
+library(PerformanceAnalytics)
+
+# Opciones ---------------------------------------------------------------------
+options(scipen = 999)
+
+# Funciones --------------------------------------------------------------------
+cuadro_distribucion <- function(datos, variable, nombre_variable) {
+  
+  datos %>% 
+   tabyl(!!variable) %>% 
+  adorn_totals() %>% 
+  set_names(c(nombre_variable, "Cantidad de clientes",
+              "Porcentaje")) %>% 
+  gt() %>% 
+  fmt_percent(
+    columns = 3,
+    decimals = 1
+  ) %>% 
+  fmt_number(
+    columns = 2,
+    sep_mark = " ",
+    decimals = 0
+  ) %>% 
+  tab_header(
+    title = paste("Distribución de frecuencia absoluta y porcentual para la variable", tolower(nombre_variable))
+  )
+  
+  
+}
+```
+
+# Diccionario de datos
+
+```{r}
+tibble(
+   id_variable = c("ID", "warehouse_block", "mode_of_shipment",
+               "customer_care_calls", "customer_rating", "cost_of_the_product",
+               "prior_purchases", "product_importance", "gender",
+               "discount_offered", "weight_in_gms", "reached_on_time"),
+  variable = c("ID", "Bloque de almacén", "Modo de envío",
+               "Llamadas de atención al cliente", 
+               "Calificación del cliente", "Costo del producto",
+               "Compras previas", "Importancia del producto", "Género",
+               "Descuento ofrecido", "Peso", "Entregado a tiempo"),
+  descripcion = c("ID del cliente", 
+                  "La empresa tiene un gran almacén que se divide en bloques como A, B, C, D, E.",
+                  "La empresa envía los productos de varias maneras, como barco, vuelo y carretera.",
+                  "Número de llamadas realizadas a partir de consulta por consulta del envío.",
+                  "La empresa ha calificado a cada cliente. 1 es el más bajo (peor), 5 es el más alto (mejor).",
+                  "Costo del producto en dolares estadounidenses.",
+                  "Número de compras previas del cliente",
+                  "La empresa ha categorizado el producto en varios parámetros, como bajo, medio, alto.",
+                  "Género del cliente, puede ser masculino o femenino.",
+                  "Descuento ofrecido en ese producto específico.",
+                  "Peso en gramos del producto.",
+                  "Es la variable objetivo, donde 1 indica que el producto NO ha llegado a tiempo y 0 indica que ha llegado a tiempo.")
+) %>% 
+  set_names(c("ID de la variable", "Nombre de variable",
+              "Descripcion de la variable")) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Diccionario de variables de datos de envio de empresa de comercio electrónico"
+  ) 
+```
+
+
+# Lectura de datos
+
+```{r}
+datos <- read_csv("datos/Train.csv") %>% 
+  clean_names() %>% 
+  rename(reached_on_time = reached_on_time_y_n) %>% 
+  mutate(across(.cols = where(is.character),
+                .fns = as.factor),
+         reached_on_time = as.factor(reached_on_time)) 
+```
+
+# Exploración inicial
+
+Primero se verifica que tan des balanceadas están las clases:
+
+```{r}
+datos %>% 
+  cuadro_distribucion("reached_on_time", "Entregado a tiempo")
+```
+
+Se observa que las clases no están demasiado des balanceadas, sin embargo, para asegurar la representación de cada una de las clases se utilizará la estratificación a la hora de escoger el conjunto de datos de entrenamiento y de prueba en la validación cruzada, con el fin de que ambas clases queden representadas en ambos conjuntos de datos y en los distintos pliegues del plan de validación cruzada.
+
+Luego de esto se realiza una exploración rápida de las variables numéricas y sus correlaciones:
+
+```{r}
+datos %>% 
+  select(where(is.numeric), -id) %>% 
+  cor(method = "pearson") %>% 
+  chart.Correlation()
+```
+
+No se observan correlaciones mayores a 0.69 o menores a -0.51.
+
+Adicionalmente se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
+
+```{r}
+datos %>% 
+  cuadro_distribucion("warehouse_block", "Bloque de almacén")
+```
+
+Seguidamente el modo de envío:
+
+```{r}
+datos %>% 
+  cuadro_distribucion("mode_of_shipment", "Modo de envío")
+```
+
+La importancia del producto:
+
+```{r}
+datos %>% 
+  cuadro_distribucion("product_importance", "Importancia del producto")
+```
+
+Y finalmente el género:
+
+```{r}
+datos %>% 
+  cuadro_distribucion("gender", "Género")
+```
+
+# Modelado
+
+## Definición de la receta
+
+Se plantea la receta general que se utilizara en todos los modelos, para el caso de las variables que son factores transformarán en variables dummy, y en el caso de las variables numéricas se realizará el paso de normalización de las mismas, con el fin de que las unidades de medida no afecten los resultados del modelo.
+
+```{r}
+receta <- recipe(reached_on_time ~ ., datos %>% 
+                   select(-id)) %>% 
+  step_dummy(all_factor_predictors()) %>% 
+  step_normalize(all_numeric_predictors())
+```
+
+Y se define el plan de validación cruzada con 10 pliegues de los datos totales, estratificando por la variable respuesta:
+
+```{r}
+set.seed(17)
+plan_vc <- vfold_cv(data = datos %>% 
+                      select(-id), 
+                    v = 10,
+                    strata = reached_on_time)
+```
+
+## Definición de modelos de máquinas de soporte vectorial
+
+```{r}
+modelo_svm_lin <- svm_linear() %>% 
+  set_engine(engine = "kernlab") %>%
+  set_mode("classification") %>% 
+  set_args(cost = tune())
+
+modelo_svm_poly <- svm_poly() %>% 
+  set_engine(engine = "kernlab") %>%
+  set_mode("classification") %>% 
+  set_args(cost = tune(),
+           degree = tune(),
+           scale_factor = tune())
+
+modelo_svm_rbf <- svm_rbf() %>% 
+  set_engine(engine = "kernlab") %>%
+  set_mode("classification") %>% 
+  set_args(cost = tune(),
+           rbf_sigma = tune())
+
+modelo_xg <- boost_tree() %>% 
+  set_engine(engine = "xgboost") %>%
+  set_mode("classification") %>% 
+  set_args(mtry = tune(),
+           min_n = tune(),
+           trees = tune())
+
+grilla_svm_lin <- grid_regular(cost(),
+                               levels = 125)
+
+grilla_svm_poly <- grid_regular(cost(),
+                                degree(),
+                                scale_factor(),
+                                levels = 5)
+
+grilla_svm_rbf <- grid_regular(cost(),
+                               rbf_sigma(),
+                               levels = 11)
+
+grilla_xg <- grid_regular(mtry(range = c(1, 10)),
+                          min_n(),
+                          trees(),
+                          levels = 5)
+
+grilla_svm_lin
+grilla_svm_poly
+grilla_svm_rbf
+grilla_xg
+```
+
+## Ajuste de hiperparámetros
+
+Se definen los flujos de trabajo y se ajustan los hiperparámetros:
+
+```{r}
+flujo_trabajo_svm_lin <- workflow() %>%
+  add_recipe(receta) %>% 
+  add_model(modelo_svm_lin) 
+
+flujo_trabajo_svm_poly <- workflow() %>%
+  add_recipe(receta) %>% 
+  add_model(modelo_svm_poly) 
+
+flujo_trabajo_svm_rbf <- workflow() %>%
+  add_recipe(receta) %>% 
+  add_model(modelo_svm_rbf) 
+
+flujo_trabajo_xg <- workflow() %>%
+  add_recipe(receta) %>% 
+  add_model(modelo_xg) 
+
+
+if (file.exists("datos/svm_lin.Rdata")) {
+  load("datos/svm_lin.Rdata")
+} else {
+  ajuste_hiperparametros_svm_lin <-
+    flujo_trabajo_svm_lin %>%
+    tune_grid(
+      resamples = plan_vc,
+      grid = grilla_svm_lin,
+      metrics = metric_set(accuracy, roc_auc),
+      control = control_grid(verbose = TRUE))
+  
+  save(ajuste_hiperparametros_svm_lin, file = "datos/svm_lin.Rdata")
+}
+
+
+if (file.exists("datos/svm_poly.Rdata")) {
+  load("datos/svm_poly.Rdata")
+} else {
+  ajuste_hiperparametros_svm_poly <-
+    flujo_trabajo_svm_poly %>%
+    tune_grid(
+      resamples = plan_vc,
+      grid = grilla_svm_poly,
+      metrics = metric_set(accuracy, roc_auc),
+      control = control_grid(verbose = TRUE))
+  
+  save(ajuste_hiperparametros_svm_poly, file = "datos/svm_poly.Rdata")
+}
+
+
+if (file.exists("datos/svm_rbf.Rdata")) {
+  load("datos/svm_rbf.Rdata")
+} else {
+  ajuste_hiperparametros_svm_rbf <-
+    flujo_trabajo_svm_rbf %>%
+    tune_grid(
+      resamples = plan_vc,
+      grid = grilla_svm_rbf,
+      metrics = metric_set(accuracy, roc_auc),
+      control = control_grid(verbose = TRUE))
+  
+  save(ajuste_hiperparametros_svm_rbf, file = "datos/svm_rbf.Rdata")
+}
+
+if (file.exists("datos/xgboost.Rdata")) {
+  load("datos/xgboost.Rdata")
+} else {
+  ajuste_hiperparametros_xg <-
+    flujo_trabajo_xg %>%
+    tune_grid(
+      resamples = plan_vc,
+      grid = grilla_xg,
+      metrics = metric_set(accuracy, roc_auc),
+      control = control_grid(verbose = TRUE))
+  
+  save(ajuste_hiperparametros_xg, file = "datos/xgboost.Rdata")
+}
+
+
+metricas_svm_lin <- ajuste_hiperparametros_svm_lin %>% 
+  collect_metrics()
+
+metricas_svm_poly <- ajuste_hiperparametros_svm_poly %>% 
+  collect_metrics()
+
+metricas_svm_rbf <- ajuste_hiperparametros_svm_rbf %>% 
+  collect_metrics()
+
+metricas_xg <- ajuste_hiperparametros_xg %>% 
+  collect_metrics()
+
+metricas_svm_lin
+metricas_svm_poly
+metricas_svm_rbf
+metricas_xg
+```
+
+## Selección de mejor combinación de hiperparámetros
+
+Se obtiene la combinación de parámetros con la mejor precisión:
+
+```{r}
+mejor_modelo_svm_lin <- ajuste_hiperparametros_svm_lin %>% 
+  select_best(metric = "accuracy")
+
+mejor_modelo_svm_poly <- ajuste_hiperparametros_svm_poly %>% 
+  select_best(metric = "accuracy")
+
+mejor_modelo_svm_rbf <- ajuste_hiperparametros_svm_rbf %>% 
+  select_best(metric = "accuracy")
+
+mejor_modelo_xg <- ajuste_hiperparametros_xg %>% 
+  select_best(metric = "accuracy")
+
+mejor_modelo_svm_lin
+mejor_modelo_svm_poly
+mejor_modelo_svm_rbf
+mejor_modelo_xg
+```
+
+## Ajuste del modelo
+
+Y se ajusta el modelo final con los datos de entrenamiento utilizando esta combinación de parámetros:
+
+```{r}
+flujo_trabajo_svm_lin <- flujo_trabajo_svm_lin %>% 
+  finalize_workflow(mejor_modelo_svm_lin)
+
+flujo_trabajo_svm_poly <- flujo_trabajo_svm_poly %>% 
+  finalize_workflow(mejor_modelo_svm_poly)
+
+flujo_trabajo_svm_rbf <- flujo_trabajo_svm_rbf %>% 
+  finalize_workflow(mejor_modelo_svm_rbf)
+
+flujo_trabajo_xg <- flujo_trabajo_xg %>% 
+  finalize_workflow(mejor_modelo_xg)
+
+
+modelo_svm_lin_entrenado <- flujo_trabajo_svm_lin %>% 
+  fit(datos %>% 
+        select(-id)) %>% 
+  extract_fit_parsnip()
+
+modelo_svm_poly_entrenado <- flujo_trabajo_svm_poly %>% 
+  fit(datos %>% 
+        select(-id)) %>% 
+  extract_fit_parsnip()
+
+modelo_svm_rbf_entrenado <- flujo_trabajo_svm_rbf %>% 
+  fit(datos %>% 
+        select(-id)) %>% 
+  extract_fit_parsnip()
+
+modelo_xg_entrenado <- flujo_trabajo_xg %>% 
+  fit(datos %>% 
+        select(-id)) %>% 
+  extract_fit_parsnip()
+```
+
+## Obtención de métricas de desempeño
+
+Y se obtiene las métricas principales con validación cruzada:
+
+```{r}
+# Métricas usando validación cruzada
+indicadores_svm_lin <- metricas_svm_lin %>% 
+  inner_join(mejor_modelo_svm_lin %>% 
+               select(-.config), by = c("cost")) %>% 
+  select(.metric, mean) %>% 
+  mutate(modelo = "Máquinas de soporte lineal") %>% 
+  mutate(.metric = case_when(
+    .metric == "accuracy"  ~ "Precisión",
+    .metric == "roc_auc" ~ "ROC AUC"),
+    mean = round(mean, 3)) 
+
+indicadores_svm_poly <- metricas_svm_poly %>% 
+  inner_join(mejor_modelo_svm_poly %>% 
+               select(-.config), by = c("cost", "degree",
+                                        "scale_factor")) %>% 
+  select(.metric, mean) %>% 
+  mutate(modelo = "Máquinas de soporte polinomial") %>% 
+  mutate(.metric = case_when(
+    .metric == "accuracy"  ~ "Precisión",
+    .metric == "roc_auc" ~ "ROC AUC"),
+    mean = round(mean, 3)) 
+
+indicadores_svm_rbf <- metricas_svm_rbf %>% 
+  inner_join(mejor_modelo_svm_rbf %>% 
+               select(-.config), by = c("cost", "rbf_sigma")) %>% 
+  select(.metric, mean) %>% 
+  mutate(modelo = "Máquinas de soporte radial") %>% 
+  mutate(.metric = case_when(
+    .metric == "accuracy"  ~ "Precisión",
+    .metric == "roc_auc" ~ "ROC AUC"),
+    mean = round(mean, 3))
+
+indicadores_xg <- metricas_xg %>% 
+  inner_join(mejor_modelo_xg %>% 
+               select(-.config), by = c("mtry", "min_n",
+                                        "trees")) %>% 
+  select(.metric, mean) %>% 
+  mutate(modelo = "XGBoost") %>% 
+  mutate(.metric = case_when(
+    .metric == "accuracy"  ~ "Precisión",
+    .metric == "roc_auc" ~ "ROC AUC"),
+    mean = round(mean, 3))
+
+indicadores_svm_lin
+indicadores_svm_poly
+indicadores_svm_rbf
+indicadores_xg
+```
+
+# Comparacion de métricas de los modelos
+
+La siguiente tabla muestra la comparación de métricas en todos los modelos utilizando validación cruzada y en su estimación final:
+
+```{r}
+indicadores_svm_lin %>% 
+  bind_rows(indicadores_svm_poly) %>% 
+  bind_rows(indicadores_svm_rbf) %>% 
+  bind_rows(indicadores_xg) %>% 
+  pivot_wider(names_from = ".metric",
+              values_from = "mean") %>% 
+  arrange(desc(`Precisión`)) %>% 
+  #arrange(desc(`ROC AUC`)) %>% 
+  rename(Modelo = modelo) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Comparacion de métricas de desempeño entre los modelos ajustados con validación cruzada de 10 pliegues"
+  )
+```
+
