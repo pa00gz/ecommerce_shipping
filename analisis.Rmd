@@ -239,11 +239,11 @@ r5=resumen(datos,weight_in_gms,reached_on_time)
 r6=resumen(datos,discount_offered,reached_on_time)
 rsumary=rbind(r1,r2,r3,r4,r5,r6)
 rsumary=rsumary%>%rename("Entregado a Tiempo"=1)
-rsumary=rsumary%>%mutate(Variable=rep(c("Llamadas de atención al cliente","Calificación de Cliente","Costo del Producto","Compras Previas","Peso","Descuento Ofrecido"), each=2))%>%select(8,1:7)
+rsumary=rsumary%>%mutate(Variable=rep(c("Llamadas de atención al cliente","Calificación del Cliente","Costo del Producto","Compras Previas","Peso","Descuento Ofrecido"), each=2))%>%select(8,1:7)
 datatable(head(rsumary,20), options = list(pageLength = 10, scrollX = TRUE))
 ```
 
-Se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
+Con base en los gráficos violines y en la tabla generados, se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende sus características de la tabla: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
 Por otro lado, las variables de peso y descuento ofrecido se comportan de manera diferente, de esta forma:
 - Peso: Los productos que no han llegado a tiempo (1) normalmente se concentran entre aquellos que pesan menos de 2000. Mientras que los productos que han llegado a tiempo (0) se concentran entre aquellos que pesan entre 4000 y 6000 (con algunos datos extremos cuyos valores son menores a 2000)
 - Descuento Ofrecido:Los productos que han llegado a tiempo (0) son aquellos para los cuales se ofrecio un descuento de menos de 10. Mientras que los productos que no han llegado a tiempo se encuentran mas distribuidos a lo largo del rango de descuento 0-60 (aunque tienen una concentración de densidad un poco mayor en menos de 10)
