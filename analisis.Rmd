@@ -173,7 +173,7 @@ gviolin=function(data, predictoras,nombre_predictoras,Y, Y_nombre){
 }
 
 v1=gviolin(datos, customer_care_calls,"Llamadas de atención al cliente",reached_on_time, "Entregado a Tiempo")
-v3=gviolin(datos, customer_rating,"Calificación de Cliente",reached_on_time, "Entregado a Tiempo")
+v3=gviolin(datos, customer_rating,"Calificación del Cliente",reached_on_time, "Entregado a Tiempo")
 v4=gviolin(datos, cost_of_the_product,"Costo del Producto",reached_on_time, "Entregado a Tiempo")
 v5=gviolin(datos, prior_purchases,"Compras Previas",reached_on_time, "Entregado a Tiempo")
 v6=gviolin(datos, weight_in_gms, "Peso",reached_on_time, "Entregado a Tiempo")
@@ -187,6 +187,10 @@ grid.arrange(
   v7,
   nrow = 3)
 ```
+Se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
+Por otro lado, las variables de peso y descuento ofrecido se comportan de manera diferente, de esta forma:
+- Peso: Los productos que no han llegado a tiempo (1) normalmente se concentran entre aquellos que pesan menos de 2000. Mientras que los productos que han llegado a tiempo (0) se concentran entre aquellos que pesan entre 4000 y 6000 (con algunos datos extremos cuyos valores son menores a 2000)
+- Descuento Ofrecido:Los productos que han llegado a tiempo (0) son aquellos para los cuales se ofrecio un descuento de menos de 10. Mientras que los productos que no han llegado a tiempo se encuentran mas distribuidos a lo largo del rango de 0-60 (aunque tienen una concentraciòn de densidad un poco mayor en menos de 10)
 
 Segundo se analizan las variables categóricas:
 ```{r}
