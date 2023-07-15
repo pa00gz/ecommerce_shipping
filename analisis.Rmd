@@ -29,6 +29,10 @@ library(gt)
 library(kernlab)
 library(xgboost)
 library(PerformanceAnalytics)
+library(RColorBrewer)
+library(ggplot2)
+library(gridExtra)
+library(grid)
 
 # Opciones ---------------------------------------------------------------------
 options(scipen = 999)
@@ -154,6 +158,63 @@ Y finalmente el género:
 datos %>% 
   cuadro_distribucion("gender", "Género")
 ```
+Se procede a determinar la distribución de las variables de acuerdo con la variable objetivo ("Entregado a Tiempo")
+
+Primero se analizan las variables numéricas:
+```{r}
+gviolin=function(data, predictoras,nombre_predictoras,Y, Y_nombre){
+    ggplot(mapping = aes(x = {{Y}}, y = {{predictoras}}, fill = {{Y}} ), data = data) +
+    geom_violin(show.legend = FALSE) +
+    geom_boxplot(width = 0.1, show.legend = FALSE)  + 
+    scale_fill_manual(values = brewer.pal(n = 8, name = "Set3"))+
+    theme(legend.position = "none") +
+    theme_minimal()+
+    labs(y=nombre_predictoras, x=Y_nombre)
+}
+
+v1=gviolin(datos, customer_care_calls,"Llamadas de atención al cliente",reached_on_time, "Entregado a Tiempo")
+v3=gviolin(datos, customer_rating,"Calificación de Cliente",reached_on_time, "Entregado a Tiempo")
+v4=gviolin(datos, cost_of_the_product,"Costo del Producto",reached_on_time, "Entregado a Tiempo")
+v5=gviolin(datos, prior_purchases,"Compras Previas",reached_on_time, "Entregado a Tiempo")
+v6=gviolin(datos, weight_in_gms, "Peso",reached_on_time, "Entregado a Tiempo")
+v7=gviolin(datos, discount_offered, "Descuento Ofrecido",reached_on_time, "Entregado a Tiempo")
+grid.arrange(
+  v1,
+  v3,
+  v4,
+  v5,
+  v6,
+  v7,
+  nrow = 3)
+```
+
+Segundo se analizan las variables categóricas:
+```{r}
+pilas=function(datos, i, nombre,Y,Y_nombre){
+datos %>% dplyr::group_by({{Y}}, {{i}}) %>% 
+  count() %>%  
+  ggplot(mapping = aes(x = reorder({{i}}, n), y = n, fill = {{Y}})) +
+  geom_col(position = "dodge")   + 
+    scale_fill_manual(values = brewer.pal(n = 8, name = "Set3"))+
+  theme_minimal()+
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+    labs(x=nombre, y="Cantidad", fill=Y_nombre)
+}
+
+p1=pilas(datos, warehouse_block , "Bloque de Almacén", reached_on_time,"Entregado a Tiempo")
+p3=pilas(datos, mode_of_shipment, "Modo de Envío",reached_on_time,"Entregado a Tiempo")
+p4=pilas(datos, product_importance , "Importancia del Producto",reached_on_time,"Entregado a Tiempo")
+p5=pilas(datos, gender, "Género",reached_on_time,"Entregado a Tiempo")
+grid.arrange(
+  p1,
+  p3,
+  p4,
+  p5,
+  nrow = 2)
+```
+
+
 
 # Modelado
 
