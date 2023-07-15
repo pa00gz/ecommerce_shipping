@@ -33,6 +33,7 @@ library(RColorBrewer)
 library(ggplot2)
 library(gridExtra)
 library(grid)
+library(vip)
 
 # Opciones ---------------------------------------------------------------------
 options(scipen = 999)
@@ -129,9 +130,9 @@ datos %>%
   chart.Correlation()
 ```
 
-No se observan correlaciones mayores a 0.69 o menores a -0.51.
+No se observan correlaciones mayores a 0.52 o menores a -0.51.
 
-Adicionalmente se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
+Adicionalmente, se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
 
 ```{r}
 datos %>% 
@@ -158,6 +159,7 @@ Y finalmente el género:
 datos %>% 
   cuadro_distribucion("gender", "Género")
 ```
+
 Se procede a determinar la distribución de las variables de acuerdo con la variable objetivo ("Entregado a Tiempo")
 
 Primero se analizan las variables numéricas:
@@ -187,12 +189,16 @@ grid.arrange(
   v7,
   nrow = 3)
 ```
+
 Se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
 Por otro lado, las variables de peso y descuento ofrecido se comportan de manera diferente, de esta forma:
-- Peso: Los productos que no han llegado a tiempo (1) normalmente se concentran entre aquellos que pesan menos de 2000. Mientras que los productos que han llegado a tiempo (0) se concentran entre aquellos que pesan entre 4000 y 6000 (con algunos datos extremos cuyos valores son menores a 2000)
-- Descuento Ofrecido:Los productos que han llegado a tiempo (0) son aquellos para los cuales se ofrecio un descuento de menos de 10. Mientras que los productos que no han llegado a tiempo se encuentran mas distribuidos a lo largo del rango de descuento 0-60 (aunque tienen una concentración de densidad un poco mayor en menos de 10)
+
+- Peso: los productos que no han llegado a tiempo (1) normalmente se concentran entre aquellos que pesan menos de 2000. Mientras que los productos que han llegado a tiempo (0) se concentran entre aquellos que pesan entre 4000 y 6000 (con algunos datos extremos cuyos valores son menores a 2000)
+
+- Descuento Ofrecido: los productos que han llegado a tiempo (0) son aquellos para los cuales se ofreció un descuento de menos de 10. Mientras que los productos que no han llegado a tiempo se encuentran mas distribuidos a lo largo del rango de descuento 0-60 (aunque tienen una concentración de densidad un poco mayor en menos de 10)
 
 Segundo se analizan las variables categóricas:
+
 ```{r}
 pilas=function(datos, i, nombre,Y,Y_nombre){
 datos %>% dplyr::group_by({{Y}}, {{i}}) %>% 
@@ -218,7 +224,7 @@ grid.arrange(
   nrow = 2)
 ```
 
-Al analizar las varibles númericas con respecto a los valores de la variable objetivo se encuentra que todas las estudiadas tiene un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre en menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
+Al analizar las variables numéricas con respecto a los valores de la variable objetivo se encuentra que todas las estudiadas tiene un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre en menor en cualquieras de los factores de las variables analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoría 0 es menor que la categoría 1 (40.3% vs 59.7%).
 
 # Modelado
 
@@ -528,4 +534,17 @@ indicadores_svm_lin %>%
     title = "Comparacion de métricas de desempeño entre los modelos ajustados con validación cruzada de 10 pliegues"
   )
 ```
+
+Se observa de que el modelo de XG Boost tuvo un mejor desempeño que las distintas variaciones de máquinas de soporte vectorial. Debido a esto, una particularidad y ventaja de los ensambles de árboles es que permiten extraer una medida de importancia de las variables del modelo, que se muestra en el siguiente gráfico:
+
+```{r}
+modelo_xg_entrenado %>%
+  vip(geom = "col", aesthetics = list(fill = "#0EA7B9")) +
+  labs(y = "Importancia de la variable",
+       title = "Importancia de variables para modelo con algoritmo XG Boost") +
+  theme_minimal()
+```
+
+Tal y como lo muestra el gráfico anterior, en el modelo de XG Boost la variable que tiene mayor importancia en si el producto se entrega a tiempo o no es el descuento ofrecido, y en un segundo lugar se encuentra la variable de peso en gramos del producto.
+
 
