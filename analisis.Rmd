@@ -160,6 +160,7 @@ Y finalmente el género:
 datos %>% 
   cuadro_distribucion("gender", "Género")
 ```
+
 Se procede a determinar la distribución de las variables de acuerdo con la variable objetivo ("Entregado a Tiempo")
 
 Primero se analizan las variables categóricas:
