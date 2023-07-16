@@ -55,9 +55,29 @@ datos %>%
   theme(legend.position = "bottom",
         panel.grid = element_blank())
 ```
+La primera interrogante que puede surgir es: ¿El medio de transporte influye en que un producto sea entregado a tiempo?
+En general se observa que los porcentages asociados a los medios de transporte son similares entre ellos (en donde la entrega a distiempo ronda en los tres en un 40%), por lo que se concluye que los medios de transporte no influyen en las entregas a tiempo o a distiempo.
 
-Una conclusión importante del siguiente gráfico es que los independientemente del modo de envío y de la importancia del producto; los productos más caros terminan llegando fuera de tiempo en casi el 50% de las entregas. Surge la interrange: se debería de tener un cuidado especial con los productos de mayor costo?.
-En general no se observan diferencias entre los métodos de envíos.
+```{r}
+datos %>% 
+  count(reached_on_time, mode_of_shipment) %>%
+  group_by(mode_of_shipment) %>%
+  mutate(n1 = round(n / sum(n) * 100,2))%>% 
+  ggplot(aes(x = reached_on_time, 
+             y = mode_of_shipment)) + 
+  geom_tile(aes(fill = n1)) + 
+  geom_text(aes(label = paste0(n1,"%") ), 
+            col = "white") + 
+  scale_fill_viridis_c(end = 0.8,direction = -1) +
+  labs(title = "Porcentaje de envíos por medio de Tranporte", 
+       subtitle = "Dvidido en: entrega a tiempo o destiempo",
+       x = "Entrega a tiempo", 
+       y = "Medio de Transporte") + 
+  theme(legend.position = "none",
+        panel.grid = element_blank())
+
+```
+Una conclusión importante del siguiente gráfico es que independientemente del modo de envío y de la importancia del producto; los productos más caros terminan llegando fuera de tiempo en casi el 50% de las entregas. Surge la interrongante: se debería de tener un cuidado especial con los productos de mayor costo?.
 
 ```{r pressure, echo=FALSE}
 datos %>% 
