@@ -188,7 +188,7 @@ grid.arrange(
 top = "Análisis descritiptivo de las variables categóricas con respecto a la variable objetivo")
 ```
 
-Al analizar las varibles númericas con respecto a los valores de la variable objetivo se encuentra que todas las estudiadas tiene un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre en menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
+Al analizar las varibles categóricas con respecto a los valores de la variable objetivo se encuentra que todas las estudiadas tiene un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre es menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
 
 Segundo se analizan las variables numéricas:
 ```{r}
