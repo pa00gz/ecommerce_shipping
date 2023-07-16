@@ -1,0 +1,123 @@
+---
+title: "Visualizaciones"
+author: 
+  - Allan Martínez
+  - Brenda Fonseca
+  - Lindey Carvajal
+  - Patrick Santamaría
+date: "20 de julio de 2023"
+always_allow_html: yes
+output:
+  rmdformats::downcute:
+    fig_width: 12
+    fig_height: 6
+    use_bookdown: true
+    number_sections: false
+editor_options:
+  chunk_output_type: console
+---
+
+# Cargar paquetes
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# Carga de paquetes ------------------------------------------------------------
+library(tidyverse)
+library(tidymodels)
+library(janitor)
+library(gt)
+library(kernlab)
+library(xgboost)
+library(PerformanceAnalytics)
+library(DiagrammeR)
+```
+
+La entrega tardía de productos no diferencia entre buenos y malos clientes.
+
+Es preocupante que casi el 40% de los envíos sean tardíos incluso en los clientes mejor calificados
+
+El gráfico refleja que no hay un esfuerzo especial por entregar a tiempo a los clientes mejores calificados, así como tampoco lo hay para que, mediante mejores entregas los clientes peos calificados mejores tras recibir un mejor servicio.
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  count(reached_on_time, customer_rating) %>% 
+  ggplot(aes(x = reached_on_time, 
+             y = customer_rating)) + 
+  geom_tile(aes(fill = n)) + 
+  geom_text(aes(label = n ), 
+            col = "white") + 
+  scale_fill_viridis_c(end = 0.8,direction = -1) +
+  labs(title = "Cantidad de envíos", 
+       subtitle = "Por entrega a tiempo o destiempo", 
+       fill = "Cantidad", 
+       x = "Entrega a tiempo", 
+       y = "Puntuación del cliente") + 
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())
+```
+
+Una conclusión importante del siguiente gráfico es que los independientemente del modo de envío y de la importancia del producto; los productos más caros terminan llegando fuera de tiempo en casi el 50% de las entregas. Surge la interrange: se debería de tener un cuidado especial con los productos de mayor costo?.
+En general no se observan diferencias entre los métodos de envíos.
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  ggplot() +
+  geom_density(aes(x = cost_of_the_product,
+                   fill = reached_on_time),
+               col = NA,
+               alpha = 0.75) +
+  scale_fill_viridis_d(end = 0.8) +
+  facet_grid(product_importance~mode_of_shipment) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
+```
+
+
+El siguiente gráfico muestra como entre más peso tiene el artículo más tiende a llegar tarde, independientemente de su forma de entrega y su importancia
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  ggplot() +
+  geom_density(aes(x = weight_in_gms,
+                   fill = reached_on_time),
+               col = NA,
+               alpha = 0.75) +
+  scale_fill_viridis_d(end = 0.8) +
+  facet_grid(product_importance~mode_of_shipment) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
+```
+
+Independientemente de la cantidad de veces que ha solicitado el cliente el servicio, el mismo puede ser entregado a tiempo o no. 
+
+Valdría la pena invertir un esfuerzo extra en entregar a tiempo a aquellos clientes con buena calificación y con refrecuencias altas?
+
+```{r}
+
+datos %>% 
+  ggplot(aes(x = prior_purchases),
+         binwidth = 1) + 
+  geom_histogram(mapping = aes(fill = reached_on_time)) + 
+  scale_fill_viridis_d(end = 0.8) +
+  labs(title = "Cantidad de envíos por entrega a tiempo",
+       x = "prior_purchases",
+       y = "Cantidad") +
+  facet_wrap(~customer_rating, 
+             ncol = 2,
+             labeller = labeller(customer_rating=label_both))
+```
+
+
+```{r}
+xgb.plot.tree(model = modelo_xg_entrenado$fit, trees = 0, plot_width = 1000, plot_height = 1000)
+
+### para exportar
+
+tree_plot = xgb.plot.tree(model = modelo_xg_entrenado$fit, trees = 0, plot_width = 1000, plot_height = 1000, render = FALSE)
+
+# export plot object to file
+export_graph(tree_plot, "xgboost_tree_plot.pdf", width = 1000, height = 1000)
+```
+
