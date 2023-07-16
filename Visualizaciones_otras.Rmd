@@ -112,6 +112,38 @@ datos %>%
 
 Independientemente de la cantidad de veces que ha solicitado el cliente el servicio, el mismo puede ser entregado a tiempo o no. 
 
+Del mismo modo, resulta interesante ver cómo aquellos productos, para los cuales el descuento ofrecido es mayor, tienden a llegar de manera tardía con más frecuencia, mientras que aquellos productos para los cuales el descuento ofrecido es menor llegan a tiempo con más frecuencia.
+Además, al compararlos con el precio de los productos se nota que esta situación es más marcado para aquellos productos con precios medios y bajos. Sin embargo, para quellos productos de precio alto la situación es más pareja entre el tiempo de llegada y el descuento (sin embargo, se debe observar que existen punto extremos que debería ser estudiados de manera independiente).
+
+```{r pressure, echo=FALSE}
+#Se divide hace el costo del producot en una variable categórica de 3 categorías:
+#Precio Alto
+#Precio Medio
+#Precio Bajo
+
+# Definir los puntos de corte para crear las categorías
+quantile(datos$cost_of_the_product,probs = 0.33)
+quantile(datos$cost_of_the_product,probs = 0.66)
+cutoffs <- c(0, 185, 239, Inf)
+
+datos$precio_cat <- cut(datos$cost_of_the_product, breaks = cutoffs, labels = c("Precio Bajo", "Precio Medio", "Precio Alto"))
+
+datos %>% 
+  ggplot() +
+  geom_boxplot(aes(x = reached_on_time,
+                   y =discount_offered)) +
+   scale_fill_viridis(discrete = TRUE, alpha=0.6)+
+  facet_grid(~precio_cat, scales = "free") +
+  labs(y="Descuento Ofrecido", x="Entregado a Tiempo")+
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("Entrega a Tiempo de acuerdo con el descuento ofrecido y con el precio del producto") +
+    xlab("")
+
+```
+
 Valdría la pena invertir un esfuerzo extra en entregar a tiempo a aquellos clientes con buena calificación y con refrecuencias altas?
 
 ```{r}
