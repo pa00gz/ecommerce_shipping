@@ -30,6 +30,7 @@ library(kernlab)
 library(xgboost)
 library(PerformanceAnalytics)
 library(DiagrammeR)
+library(viridis)
 ```
 
 La entrega tardía de productos no diferencia entre buenos y malos clientes.
@@ -131,8 +132,9 @@ datos$precio_cat <- cut(datos$cost_of_the_product, breaks = cutoffs, labels = c(
 datos %>% 
   ggplot() +
   geom_boxplot(aes(x = reached_on_time,
-                   y =discount_offered)) +
-   scale_fill_viridis(discrete = TRUE, alpha=0.6)+
+                   y =discount_offered,
+                   fill=reached_on_time)) +
+   scale_fill_viridis_d(end = 0.8, alpha = 0.7)+
   facet_grid(~precio_cat, scales = "free") +
   labs(y="Descuento Ofrecido", x="Entregado a Tiempo")+
   theme(
