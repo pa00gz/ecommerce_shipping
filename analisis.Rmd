@@ -242,7 +242,11 @@ r6=resumen(datos,discount_offered,reached_on_time)
 rsumary=rbind(r1,r2,r3,r4,r5,r6)
 rsumary=rsumary%>%rename("Entregado a Tiempo"=1)
 rsumary=rsumary%>%mutate(Variable=rep(c("Llamadas de atención al cliente","Calificación del Cliente","Costo del Producto","Compras Previas","Peso","Descuento Ofrecido"), each=2))%>%select(8,1:7)
-datatable(head(rsumary,20), options = list(pageLength = 10, scrollX = TRUE))
+datatable(head(rsumary,20), 
+  caption = "Tabla Resumen para las variables numéricas de acuerdo a las categorías de la variable ojetivo",
+  options = list(
+  pageLength = 10, 
+  scrollX = TRUE))
 ```
 
 Con base en los gráficos violines y en la tabla generados, se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende sus características de la tabla: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
