@@ -131,9 +131,9 @@ datos %>%
   chart.Correlation()
 ```
 
-No se observan correlaciones mayores a 0.69 o menores a -0.51.
+No se observan correlaciones mayores a 0.52 o menores a -0.51.
 
-Adicionalmente se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
+Adicionalmente, se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
 
 ```{r}
 datos %>% 
@@ -565,4 +565,17 @@ indicadores_svm_lin %>%
     title = "Comparacion de métricas de desempeño entre los modelos ajustados con validación cruzada de 10 pliegues"
   )
 ```
+
+Se observa de que el modelo de XG Boost tuvo un mejor desempeño que las distintas variaciones de máquinas de soporte vectorial. Debido a esto, una particularidad y ventaja de los ensambles de árboles es que permiten extraer una medida de importancia de las variables del modelo, que se muestra en el siguiente gráfico:
+
+```{r}
+modelo_xg_entrenado %>%
+  vip(geom = "col", aesthetics = list(fill = "#0EA7B9")) +
+  labs(y = "Importancia de la variable",
+       title = "Importancia de variables para modelo con algoritmo XG Boost") +
+  theme_minimal()
+```
+
+Tal y como lo muestra el gráfico anterior, en el modelo de XG Boost la variable que tiene mayor importancia en si el producto se entrega a tiempo o no es el descuento ofrecido, y en un segundo lugar se encuentra la variable de peso en gramos del producto.
+
 
