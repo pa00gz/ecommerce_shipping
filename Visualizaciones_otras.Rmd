@@ -1,0 +1,177 @@
+---
+title: "Visualizaciones"
+author: 
+  - Allan Martínez
+  - Brenda Fonseca
+  - Lindey Carvajal
+  - Patrick Santamaría
+date: "20 de julio de 2023"
+always_allow_html: yes
+output:
+  rmdformats::downcute:
+    fig_width: 12
+    fig_height: 6
+    use_bookdown: true
+    number_sections: false
+editor_options:
+  chunk_output_type: console
+---
+
+# Cargar paquetes
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+# Carga de paquetes ------------------------------------------------------------
+library(tidyverse)
+library(tidymodels)
+library(janitor)
+library(gt)
+library(kernlab)
+library(xgboost)
+library(PerformanceAnalytics)
+library(DiagrammeR)
+library(viridis)
+```
+
+La entrega tardía de productos no diferencia entre buenos y malos clientes.
+
+Es preocupante que casi el 40% de los envíos sean tardíos incluso en los clientes mejor calificados
+
+El gráfico refleja que no hay un esfuerzo especial por entregar a tiempo a los clientes mejores calificados, así como tampoco lo hay para que, mediante mejores entregas los clientes peos calificados mejores tras recibir un mejor servicio.
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  count(reached_on_time, customer_rating) %>% 
+  ggplot(aes(x = reached_on_time, 
+             y = customer_rating)) + 
+  geom_tile(aes(fill = n)) + 
+  geom_text(aes(label = n ), 
+            col = "white") + 
+  scale_fill_viridis_c(end = 0.8,direction = -1) +
+  labs(title = "Cantidad de envíos", 
+       subtitle = "Por entrega a tiempo o destiempo", 
+       fill = "Cantidad", 
+       x = "Entrega a tiempo", 
+       y = "Puntuación del cliente") + 
+  theme(legend.position = "bottom",
+        panel.grid = element_blank())
+```
+La primera interrogante que puede surgir es: ¿El medio de transporte influye en que un producto sea entregado a tiempo?
+En general se observa que los porcentages asociados a los medios de transporte son similares entre ellos (en donde la entrega a distiempo ronda en los tres en un 40%), por lo que se concluye que los medios de transporte no influyen en las entregas a tiempo o a distiempo.
+
+```{r}
+datos %>% 
+  count(reached_on_time, mode_of_shipment) %>%
+  group_by(mode_of_shipment) %>%
+  mutate(n1 = round(n / sum(n) * 100,2))%>% 
+  ggplot(aes(x = reached_on_time, 
+             y = mode_of_shipment)) + 
+  geom_tile(aes(fill = n1)) + 
+  geom_text(aes(label = paste0(n1,"%") ), 
+            col = "white") + 
+  scale_fill_viridis_c(end = 0.8,direction = -1) +
+  labs(title = "Porcentaje de envíos por medio de Tranporte", 
+       subtitle = "Dvidido en: entrega a tiempo o destiempo",
+       x = "Entrega a tiempo", 
+       y = "Medio de Transporte") + 
+  theme(legend.position = "none",
+        panel.grid = element_blank())
+
+```
+Una conclusión importante del siguiente gráfico es que independientemente del modo de envío y de la importancia del producto; los productos más caros terminan llegando fuera de tiempo en casi el 50% de las entregas. Surge la interrongante: se debería de tener un cuidado especial con los productos de mayor costo?.
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  ggplot() +
+  geom_density(aes(x = cost_of_the_product,
+                   fill = reached_on_time),
+               col = NA,
+               alpha = 0.75) +
+  scale_fill_viridis_d(end = 0.8) +
+  facet_grid(product_importance~mode_of_shipment) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
+```
+
+
+El siguiente gráfico muestra como entre más peso tiene el artículo más tiende a llegar tarde, independientemente de su forma de entrega y su importancia
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  ggplot() +
+  geom_density(aes(x = weight_in_gms,
+                   fill = reached_on_time),
+               col = NA,
+               alpha = 0.75) +
+  scale_fill_viridis_d(end = 0.8) +
+  facet_grid(product_importance~mode_of_shipment) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
+```
+
+Independientemente de la cantidad de veces que ha solicitado el cliente el servicio, el mismo puede ser entregado a tiempo o no. 
+
+Del mismo modo, resulta interesante ver cómo aquellos productos, para los cuales el descuento ofrecido es mayor, tienden a llegar de manera tardía con más frecuencia, mientras que aquellos productos para los cuales el descuento ofrecido es menor llegan a tiempo con más frecuencia.
+Además, al compararlos con el precio de los productos se nota que esta situación es más marcado para aquellos productos con precios medios y bajos. Sin embargo, para quellos productos de precio alto la situación es más pareja entre el tiempo de llegada y el descuento (sin embargo, se debe observar que existen punto extremos que debería ser estudiados de manera independiente).
+
+```{r pressure, echo=FALSE}
+#Se divide hace el costo del producot en una variable categórica de 3 categorías:
+#Precio Alto
+#Precio Medio
+#Precio Bajo
+
+# Definir los puntos de corte para crear las categorías
+quantile(datos$cost_of_the_product,probs = 0.33)
+quantile(datos$cost_of_the_product,probs = 0.66)
+cutoffs <- c(0, 185, 239, Inf)
+
+datos$precio_cat <- cut(datos$cost_of_the_product, breaks = cutoffs, labels = c("Precio Bajo", "Precio Medio", "Precio Alto"))
+
+datos %>% 
+  ggplot() +
+  geom_boxplot(aes(x = reached_on_time,
+                   y =discount_offered,
+                   fill=reached_on_time)) +
+   scale_fill_viridis_d(end = 0.8, alpha = 0.7)+
+  facet_grid(~precio_cat, scales = "free") +
+  labs(y="Descuento Ofrecido", x="Entregado a Tiempo")+
+  theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("Entrega a Tiempo de acuerdo con el descuento ofrecido y con el precio del producto") +
+    xlab("")
+
+```
+
+Valdría la pena invertir un esfuerzo extra en entregar a tiempo a aquellos clientes con buena calificación y con refrecuencias altas?
+
+```{r}
+
+datos %>% 
+  ggplot(aes(x = prior_purchases),
+         binwidth = 1) + 
+  geom_histogram(mapping = aes(fill = reached_on_time)) + 
+  scale_fill_viridis_d(end = 0.8) +
+  labs(title = "Cantidad de envíos por entrega a tiempo",
+       x = "prior_purchases",
+       y = "Cantidad") +
+  facet_wrap(~customer_rating, 
+             ncol = 2,
+             labeller = labeller(customer_rating=label_both))
+```
+
+
+```{r}
+xgb.plot.tree(model = modelo_xg_entrenado$fit, trees = 0, plot_width = 1000, plot_height = 1000)
+
+### para exportar
+
+tree_plot = xgb.plot.tree(model = modelo_xg_entrenado$fit, trees = 0, plot_width = 1000, plot_height = 1000, render = FALSE)
+
+# export plot object to file
+export_graph(tree_plot, "xgboost_tree_plot.pdf", width = 1000, height = 1000)
+```
+
