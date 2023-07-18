@@ -65,7 +65,29 @@ cuadro_distribucion <- function(datos, variable, nombre_variable) {
 }
 ```
 
+# Descripción de los datos
+
+El archivo de datos con el cual se realizará el análisis contiene información de envíos de productos de una empresa internacional de comercio en línea. En total el archivo contiene 10999 observaciones con 11 atributos y ningún valor perdido (omitiendo la columna ID). El archivo se encuentra disponible en [Kaggle]( https://www.kaggle.com/datasets/prachi13/customer-analytics))
+
+# Objetivo
+
+El objetivo de la investigación consiste en desarrollar varios modelos de aprendizaje de máquinas que permitan realizar predicciones a futuro de los pedidos que se entregaran a tiempo o destiempo y seleccionar el que tenga las mejores métricas de desempeño. 
+
+Para esto, el archivo de datos cuenta con la variable ´Entregado a tiempo´, la cual tiene dos clases (Llegó a tiempo o no llegó a tiempo).
+
+# Métodología
+
+Primeramente se realizará un análisis exploratorio para entender el comportamiento de las variables tanto individuales como en cruce con otras. 
+
+Se creará una receta general junto con un plan de validación cruzada con 10 pliegues para el tratamiento y ajuste de los modelos. 
+
+Se definirán los modelos de máquinas de soporte vectorial lineal, polinomial, con función base radial y un modelo de árboles potenciados (xgboost), además, a cada uno se les aplicará el ajuste a los hiperparámetros mediante mayas previamente definidas. 
+
+Finalmente se analizarán las métricas de desempeño y se seleccionará el mejor modelo.
+
 # Diccionario de datos
+
+A continuación, el siguiente cuadro contiene la definición de cada variable y su identificador respectivo en el archivo de datos.
 
 ```{r}
 tibble(
@@ -99,8 +121,9 @@ tibble(
   ) 
 ```
 
-
 # Lectura de datos
+
+Se cargan los datos y se define la variables objetivo como factor.
 
 ```{r}
 datos <- read_csv("datos/Train.csv") %>% 
@@ -113,7 +136,7 @@ datos <- read_csv("datos/Train.csv") %>%
 
 # Exploración inicial
 
-Primero se verifica que tan des balanceadas están las clases:
+El siguiente cuadro muestra el balance de las clases de la variables objetivo.
 
 ```{r}
 datos %>% 
@@ -122,7 +145,7 @@ datos %>%
 
 Se observa que las clases no están demasiado des balanceadas, sin embargo, para asegurar la representación de cada una de las clases se utilizará la estratificación a la hora de escoger el conjunto de datos de entrenamiento y de prueba en la validación cruzada, con el fin de que ambas clases queden representadas en ambos conjuntos de datos y en los distintos pliegues del plan de validación cruzada.
 
-Luego de esto se realiza una exploración rápida de las variables numéricas y sus correlaciones:
+Luego de esto se realiza un análisis exploratorio de las variables numéricas y sus correlaciones, el siguiente gráfico muestra estás relaciones, y se logra observar que no hay correlaciones mayores a 0.52 o menores a -0.51.:
 
 ```{r}
 datos %>% 
@@ -131,30 +154,28 @@ datos %>%
   chart.Correlation()
 ```
 
-No se observan correlaciones mayores a 0.52 o menores a -0.51.
-
-Adicionalmente, se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
+Adicionalmente, se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén, el siguiente cuadro muestra las distribuciones y se logra identificar que en generar todas tiene un porcentaje cercano al 16.7% con excepción del bloque F del 33.3%.
 
 ```{r}
 datos %>% 
   cuadro_distribucion("warehouse_block", "Bloque de almacén")
 ```
 
-Seguidamente el modo de envío:
+En lo que respecta al modo de envío de las entregas, se tiene que, el modo más frecuente es mediante barco con el 67.8%, seguido por envíos mediente vuelos con 16.2% y en tercer lugar mediante carretera. El cuadro a continuación muestra los datos mencionados.
 
 ```{r}
 datos %>% 
   cuadro_distribucion("mode_of_shipment", "Modo de envío")
 ```
 
-La importancia del producto:
+Por otro lado, se tiene que, el 48.2% de los envíos son de productos con baja importancia para el negocio, seguido por los de importancia media con el 43.2% y solamente un 8.6% son envíos de productos de alta importancia. El siguiente cuadro refleja lo mencionado-
 
 ```{r}
 datos %>% 
   cuadro_distribucion("product_importance", "Importancia del producto")
 ```
 
-Y finalmente el género:
+Finalmente, el género de los cliente están representados por 50.4% femeninos y 49.6% por masculinos 
 
 ```{r}
 datos %>% 
@@ -163,7 +184,8 @@ datos %>%
 
 Se procede a determinar la distribución de las variables de acuerdo con la variable objetivo ("Entregado a Tiempo")
 
-Primero se analizan las variables categóricas:
+Primero se analizan las variables categóricas, la siguiente figura muestra el cruce entre estás variables.
+
 ```{r}
 pilas=function(datos, i, nombre,Y,Y_nombre){
 datos %>% dplyr::group_by({{Y}}, {{i}}) %>% 
@@ -189,9 +211,11 @@ grid.arrange(
   nrow = 2,
 top = "Análisis descritiptivo de las variables categóricas con respecto a la variable objetivo")
 ```
-Al analizar las variables categóricas con respecto a los valores de la variable objetivo se encuentra que todas las estudiadas tiene un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre es menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
 
-Segundo se analizan las variables numéricas:
+Al analizar las variables categóricas con respecto a los valores de la variable objetivo se encuentra que todas tienen un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre es menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
+
+La siguiente figura muestra la relación entre las variables numéricas y la variable objetivo.
+
 ```{r}
 gviolin=function(data, predictoras,nombre_predictoras,Y, Y_nombre){
     ggplot(mapping = aes(x = {{Y}}, y = {{predictoras}}, fill = {{Y}} ), data = data) +
@@ -219,7 +243,11 @@ grid.arrange(
   nrow = 3,
 top = "Análisis descritiptivo de las variables numéricas con respecto a la variable objetivo")
 ```
-Se crea además una tabla resumen por variable según la categoría de la variable objetivo que ayude a verificar los resultados obtenidos de lo gráficos:
+
+En la figura se logra observar que la variable objetivo independientemente del valor de la variable objetivo, las variables numéricas se dispersan de forma similar en las llamadas de atención del cliente, calificación del cliente, costo de producto y compras previas tanto si el producto fue entregado a tiempo o no; por otro lado, el peso del producto tiende a estar más concretado entre los 6000 y 4000 gramos en aquellas entregas que no se realizaron a tiempo. En cuanto al descuento ofrecido, las entregas no realizadas a tiempo se encuentran entre los 10 puntos o menos. 
+
+La siguiente tabla contiene un resumen por variable según la categoría de la variable objetivo, la cual ayuda a verificar los resultados obtenidos de las figuras:
+
 ```{r}
 resumen=function(data, predictora,Y){
 data %>%
@@ -250,12 +278,12 @@ datatable(head(rsumary,20),
   scrollX = TRUE))
 ```
 
-Con base en los gráficos violines y en la tabla generados, se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende sus características de la tabla: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
+Con base en los gráficos violines y en las tablas generadas, se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables: 
+
+Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende sus características de la tabla: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
 Por otro lado, las variables de peso y descuento ofrecido se comportan de manera diferente, de esta forma:
 - Peso: Los productos que no han llegado a tiempo (1) normalmente se concentran entre aquellos que pesan menos de 2000. Mientras que los productos que han llegado a tiempo (0) se concentran entre aquellos que pesan entre 4000 y 6000 (con algunos datos extremos cuyos valores son menores a 2000)
 - Descuento Ofrecido: Los productos que han llegado a tiempo (0) son aquellos para los cuales se ofrecio un descuento de menos de 10. Mientras que los productos que no han llegado a tiempo se encuentran mas distribuidos a lo largo del rango de descuento 0-60 (aunque tienen una concentración de densidad un poco mayor en menos de 10)
-
-
 
 # Modelado
 
