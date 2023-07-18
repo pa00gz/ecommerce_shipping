@@ -490,7 +490,13 @@ mejor_modelo_svm_lin %>%
   gt() %>% 
   tab_header(
     title = "Mejor combinacion de parámetros para SVM lineal"
-  )
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_svm_lin %>% 
+                                                                                                     inner_join(metricas_svm_lin %>% 
+                                                                                                                  filter(.metric == "accuracy"), by = c("cost")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
 ```
 
 Lo mismo para las SVM polinomial:
@@ -503,8 +509,15 @@ mejor_modelo_svm_poly %>%
   select(-.config) %>% 
   gt() %>% 
   tab_header(
-    title = "Mejor combinacion de parámetros para SVM lineal"
-  )
+    title = "Mejor combinacion de parámetros para SVM polinomial"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_svm_poly %>% 
+                                                                                                     inner_join(metricas_svm_poly %>% 
+                                                                                                                  filter(.metric == "accuracy"),
+                                                                                                                by = c("cost", "scale_factor", "degree")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
 ```
 
 Las SVM radial:
@@ -517,8 +530,15 @@ mejor_modelo_svm_rbf %>%
   select(-.config) %>% 
   gt() %>% 
   tab_header(
-    title = "Mejor combinacion de parámetros para SVM lineal"
-  )
+    title = "Mejor combinacion de parámetros para SVM radial"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_svm_rbf %>% 
+                                                                                                     inner_join(metricas_svm_rbf %>% 
+                                                                                                                  filter(.metric == "accuracy"),
+                                                                                                                by = c("cost", "rbf_sigma")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
 ```
 
 Y finalmente para el XG Boost:
@@ -531,8 +551,15 @@ mejor_modelo_xg %>%
   select(-.config) %>% 
   gt() %>% 
   tab_header(
-    title = "Mejor combinacion de parámetros para SVM lineal"
-  )
+    title = "Mejor combinacion de parámetros para XG Boost"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_xg %>% 
+                                                                                                     inner_join(metricas_xg %>% 
+                                                                                                                  filter(.metric == "accuracy"),
+                                                                                                                by = c("trees", "mtry", "min_n")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
 ```
 
 ## Ajuste del modelo
