@@ -65,7 +65,29 @@ cuadro_distribucion <- function(datos, variable, nombre_variable) {
 }
 ```
 
+# Descripción de los datos
+
+El archivo de datos con el cual se realizará el análisis contiene información de envíos de productos de una empresa internacional de comercio en línea. En total el archivo contiene 10999 observaciones con 11 atributos y ningún valor perdido (omitiendo la columna ID). El archivo se encuentra disponible en [Kaggle]( https://www.kaggle.com/datasets/prachi13/customer-analytics))
+
+# Objetivo
+
+El objetivo de la investigación consiste en desarrollar varios modelos de aprendizaje de máquinas que permitan realizar predicciones a futuro de los pedidos que se entregaran a tiempo o destiempo y seleccionar el que tenga las mejores métricas de desempeño. 
+
+Para esto, el archivo de datos cuenta con la variable ´Entregado a tiempo´, la cual tiene dos clases (Llegó a tiempo o no llegó a tiempo).
+
+# Métodología
+
+Primeramente se realizará un análisis exploratorio para entender el comportamiento de las variables tanto individuales como en cruce con otras. 
+
+Se creará una receta general junto con un plan de validación cruzada con 10 pliegues para el tratamiento y ajuste de los modelos. 
+
+Se definirán los modelos de máquinas de soporte vectorial lineal, polinomial, con función base radial y un modelo de árboles potenciados (xgboost), además, a cada uno se les aplicará el ajuste a los hiperparámetros mediante mayas previamente definidas. 
+
+Finalmente se analizarán las métricas de desempeño y se seleccionará el mejor modelo.
+
 # Diccionario de datos
+
+A continuación, el siguiente cuadro contiene la definición de cada variable y su identificador respectivo en el archivo de datos.
 
 ```{r}
 tibble(
@@ -99,8 +121,9 @@ tibble(
   ) 
 ```
 
-
 # Lectura de datos
+
+Se cargan los datos y se define la variables objetivo como factor.
 
 ```{r}
 datos <- read_csv("datos/Train.csv") %>% 
@@ -113,7 +136,7 @@ datos <- read_csv("datos/Train.csv") %>%
 
 # Exploración inicial
 
-Primero se verifica que tan des balanceadas están las clases:
+El siguiente cuadro muestra el balance de las clases de la variables objetivo.
 
 ```{r}
 datos %>% 
@@ -122,7 +145,7 @@ datos %>%
 
 Se observa que las clases no están demasiado des balanceadas, sin embargo, para asegurar la representación de cada una de las clases se utilizará la estratificación a la hora de escoger el conjunto de datos de entrenamiento y de prueba en la validación cruzada, con el fin de que ambas clases queden representadas en ambos conjuntos de datos y en los distintos pliegues del plan de validación cruzada.
 
-Luego de esto se realiza una exploración rápida de las variables numéricas y sus correlaciones:
+Luego de esto se realiza un análisis exploratorio de las variables numéricas y sus correlaciones, el siguiente gráfico muestra estás relaciones, y se logra observar que no hay correlaciones mayores a 0.52 o menores a -0.51.:
 
 ```{r}
 datos %>% 
@@ -131,30 +154,28 @@ datos %>%
   chart.Correlation()
 ```
 
-No se observan correlaciones mayores a 0.52 o menores a -0.51.
-
-Adicionalmente, se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén:
+Adicionalmente, se explorará la distribución de categorías de las variables que son factores. Iniciando con bloque de almacén, el siguiente cuadro muestra las distribuciones y se logra identificar que en generar todas tiene un porcentaje cercano al 16.7% con excepción del bloque F del 33.3%.
 
 ```{r}
 datos %>% 
   cuadro_distribucion("warehouse_block", "Bloque de almacén")
 ```
 
-Seguidamente el modo de envío:
+En lo que respecta al modo de envío de las entregas, se tiene que, el modo más frecuente es mediante barco con el 67.8%, seguido por envíos mediente vuelos con 16.2% y en tercer lugar mediante carretera. El cuadro a continuación muestra los datos mencionados.
 
 ```{r}
 datos %>% 
   cuadro_distribucion("mode_of_shipment", "Modo de envío")
 ```
 
-La importancia del producto:
+Por otro lado, se tiene que, el 48.2% de los envíos son de productos con baja importancia para el negocio, seguido por los de importancia media con el 43.2% y solamente un 8.6% son envíos de productos de alta importancia. El siguiente cuadro refleja lo mencionado-
 
 ```{r}
 datos %>% 
   cuadro_distribucion("product_importance", "Importancia del producto")
 ```
 
-Y finalmente el género:
+Finalmente, el género de los cliente están representados por 50.4% femeninos y 49.6% por masculinos 
 
 ```{r}
 datos %>% 
@@ -163,7 +184,8 @@ datos %>%
 
 Se procede a determinar la distribución de las variables de acuerdo con la variable objetivo ("Entregado a Tiempo")
 
-Primero se analizan las variables categóricas:
+Primero se analizan las variables categóricas, la siguiente figura muestra el cruce entre estás variables.
+
 ```{r}
 pilas=function(datos, i, nombre,Y,Y_nombre){
 datos %>% dplyr::group_by({{Y}}, {{i}}) %>% 
@@ -189,9 +211,11 @@ grid.arrange(
   nrow = 2,
 top = "Análisis descritiptivo de las variables categóricas con respecto a la variable objetivo")
 ```
-Al analizar las variables categóricas con respecto a los valores de la variable objetivo se encuentra que todas las estudiadas tiene un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre es menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
 
-Segundo se analizan las variables numéricas:
+Al analizar las variables categóricas con respecto a los valores de la variable objetivo se encuentra que todas tienen un comportamiento similar: de esta manera, la categoría Entregado a Tiempo (0) siempre es menor en cualquieras de los factores de las varibles analizadas. Lo cual concuerda con lo analizado al inicio en donde se vio que la categoria 0 es menor que la categoría 1 (40.3% vs 59.7%).
+
+La siguiente figura muestra la relación entre las variables numéricas y la variable objetivo.
+
 ```{r}
 gviolin=function(data, predictoras,nombre_predictoras,Y, Y_nombre){
     ggplot(mapping = aes(x = {{Y}}, y = {{predictoras}}, fill = {{Y}} ), data = data) +
@@ -219,49 +243,78 @@ grid.arrange(
   nrow = 3,
 top = "Análisis descritiptivo de las variables numéricas con respecto a la variable objetivo")
 ```
-Se crea además una tabla resumen por variable según la categoría de la variable objetivo que ayude a verificar los resultados obtenidos de lo gráficos:
+
+En la figura se logra observar que la variable objetivo independientemente del valor de la variable objetivo, las variables numéricas se dispersan de forma similar en las llamadas de atención del cliente, calificación del cliente, costo de producto y compras previas tanto si el producto fue entregado a tiempo o no; por otro lado, el peso del producto tiende a estar más concretado entre los 6000 y 4000 gramos en aquellas entregas que no se realizaron a tiempo. En cuanto al descuento ofrecido, las entregas no realizadas a tiempo se encuentran entre los 10 puntos o menos. 
+
+La siguiente tabla contiene un resumen por variable según la categoría de la variable objetivo, la cual ayuda a verificar los resultados obtenidos de las figuras:
+
 ```{r}
-resumen=function(data, predictora,Y){
+resumen <- function(data, predictora,Y){
 data %>%
   group_by({{Y}}) %>%
   summarise(min = min({{predictora}}),
             q1 = quantile({{predictora}}, 0.25),
             median = median({{predictora}}),
-            mean = mean({{predictora}}),
+            mean = round(mean({{predictora}}), 2),
             q3 = quantile({{predictora}}, 0.75),
             max = max({{predictora}}))
     
 }
 
 
-r1=resumen(datos,customer_care_calls,reached_on_time)
-r2=resumen(datos,customer_rating,reached_on_time)
-r3=resumen(datos,cost_of_the_product,reached_on_time)
-r4=resumen(datos,prior_purchases,reached_on_time)
-r5=resumen(datos,weight_in_gms,reached_on_time)
-r6=resumen(datos,discount_offered,reached_on_time)
-rsumary=rbind(r1,r2,r3,r4,r5,r6)
-rsumary=rsumary%>%rename("Entregado a Tiempo"=1)
-rsumary=rsumary%>%mutate(Variable=rep(c("Llamadas de atención al cliente","Calificación del Cliente","Costo del Producto","Compras Previas","Peso","Descuento Ofrecido"), each=2))%>%select(8,1:7)
-datatable(head(rsumary,20), 
+r1 = resumen(datos, customer_care_calls, reached_on_time)
+r2 = resumen(datos, customer_rating, reached_on_time)
+r3 = resumen(datos, cost_of_the_product, reached_on_time)
+r4 = resumen(datos, prior_purchases, reached_on_time)
+r5 = resumen(datos, weight_in_gms, reached_on_time)
+r6 = resumen(datos, discount_offered, reached_on_time)
+rsumary = rbind(r1, r2, r3, r4, r5, r6)
+rsumary = rsumary %>% 
+  rename("Entregado a Tiempo" = 1)
+rsumary = rsumary %>% 
+  mutate(Variable = rep(
+    c(
+      "Llamadas de atención al cliente",
+      "Calificación del Cliente",
+      "Costo del Producto",
+      "Compras Previas",
+      "Peso",
+      "Descuento Ofrecido"
+    ),
+    each = 2
+  )) %>% 
+  select(8, 1:7)
+
+datatable(
+  head(rsumary, 20),
   caption = "Tabla Resumen para las variables numéricas de acuerdo a las categorías de la variable ojetivo",
-  options = list(
-  pageLength = 10, 
-  scrollX = TRUE))
+  options = list(pageLength = 10,
+                 scrollX = TRUE)
+)
 ```
 
-Con base en los gráficos violines y en la tabla generados, se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables:Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende sus características de la tabla: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
+Con base en los gráficos violines y en las tablas generadas, se observa que las categorías de la variable objetivo se comportan de manera muy similar en las variables: 
+
+Llamadas de atención al cliente, calificación del cliente, costo del producto y compras previas, ya que sus boxplots (y por ende sus características de la tabla: media, variancia, mínimos y máximos) y su distribución de densidad entre los valores se comportan de manera parecida.
 Por otro lado, las variables de peso y descuento ofrecido se comportan de manera diferente, de esta forma:
 - Peso: Los productos que no han llegado a tiempo (1) normalmente se concentran entre aquellos que pesan menos de 2000. Mientras que los productos que han llegado a tiempo (0) se concentran entre aquellos que pesan entre 4000 y 6000 (con algunos datos extremos cuyos valores son menores a 2000)
 - Descuento Ofrecido: Los productos que han llegado a tiempo (0) son aquellos para los cuales se ofrecio un descuento de menos de 10. Mientras que los productos que no han llegado a tiempo se encuentran mas distribuidos a lo largo del rango de descuento 0-60 (aunque tienen una concentración de densidad un poco mayor en menos de 10)
 
-
-
 # Modelado
+
+Para la parte de modelado se crearán modelos de clasificación, donde la variable respuesta es si el producto fue entregado a tiempo o no, y las variables predictoras, se utilizarán todas las exploradas, ya que interesa tener la mayor capacidad de clasificación satisfactoria.
+
+Para lo modelos de clasificiación se pondrán a competir 3 variaciones de las máquinas de soporte vectorial (SVM), utilizando 3 funciones de núcleo distintas, la lineal, la polinomial y la radial. Adicionalmente como cuarto modelo se realizará un ensamble de árboles que es un método más reciente, potente y ampliamente utilizado que se llama XG Boost.
+
+Las SVM lineales intentan separar las clases (en este caso si el prooducto se entregó a tiempo o no en) en una línea recta o plano, mientras que la función de núcleo polinomial y radial permite realizar separaciones de las clases no lineales más complejas, en donde la radial es capaz de hacer separaciones no lineales más complejas, ya que la función permite capturar estructuras más intrincadas en los datos, así que es especialmente útil cuando no se conoce la forma exacta de separación de los datos, como el presente caso.
+
+Por otro lado, XG Boost es un algoritmo de clasificación que se basa en el refuerzo de gradientes. Este combina múltiples modelos más débiles (generalmente árboles de decisión) para formar un modelo más fuerte y preciso. El objetivo del refuerzo de gradientes es mejorar iterativamente un modelo, agregando nuevos modelos que se centren en los errores cometidos por los modelos anteriores.
+
+Para realizar los modelos se utilizarán las diferentes librerías contenidas dentro el paquete de tidymodels a continuación:
 
 ## Definición de la receta
 
-Se plantea la receta general que se utilizara en todos los modelos, para el caso de las variables que son factores transformarán en variables dummy, y en el caso de las variables numéricas se realizará el paso de normalización de las mismas, con el fin de que las unidades de medida no afecten los resultados del modelo.
+Se plantea la receta general que se utilizara en todos los modelos, para el caso de las variables que son factores transformarán en variables dummy, y en el caso de las variables numéricas se realizará el paso de normalización de las mismas, con el fin de que las unidades de medida de las distintas variables no afecten los resultados del modelo. Se define la receta a continuación:
 
 ```{r}
 receta <- recipe(reached_on_time ~ ., datos %>% 
@@ -270,7 +323,7 @@ receta <- recipe(reached_on_time ~ ., datos %>%
   step_normalize(all_numeric_predictors())
 ```
 
-Y se define el plan de validación cruzada con 10 pliegues de los datos totales, estratificando por la variable respuesta:
+Para el ajuste de los modelos se realizará una calibración de parámetros, utilizando distintas combinaciones de los mismos para obtener la combinación más óptima. Esto se realizará con un plan de validación cruzada de 10 pliegues, que utilizará la estratificación de tidymodels para asegurar la representación de ambas clases en los 10 pliegues:
 
 ```{r}
 set.seed(17)
@@ -280,7 +333,11 @@ plan_vc <- vfold_cv(data = datos %>%
                     strata = reached_on_time)
 ```
 
-## Definición de modelos de máquinas de soporte vectorial
+## Definición de modelos
+
+Posterior a ello con el paquete parsnip, se definen los modelos antes mencionados y los parámetros que se calibrarán. En el caso de máquinas de soporte vectorial lineal se calibrará la función de costo (cost), en el polinomial adicionalmente se calibrará el grado del polinomio (degree) y el factor de escala (scale_factor) aplicado a los predictores, y finalmente para la función radial la desviación estándar del núcleo radial (rbf_sgima).
+
+En el caso de XG Boost se calibrará el número de variables predictoras aleatorias (mtry) que se utilizarán en los árboles del ensamble, el número mínimo de observaciones para los nodos hoja (min_n) y la cantidad de árboles (trees) del ensamble.
 
 ```{r}
 modelo_svm_lin <- svm_linear() %>% 
@@ -307,33 +364,74 @@ modelo_xg <- boost_tree() %>%
   set_args(mtry = tune(),
            min_n = tune(),
            trees = tune())
+```
 
+## Definición de grilla o combinaciones de parámetros
+
+A continuación se definen las combinaciones de parámetros que serán probados en cada uno de los modelos. En el caso de la SVM lineal se utilzarán 125 combinaciones de la función de costo:
+
+```{r}
 grilla_svm_lin <- grid_regular(cost(),
                                levels = 125)
 
+grilla_svm_lin %>% 
+  datatable(caption = "Combinaciones de parámetros para el modelo de SVM lineal",
+            options = list(
+              pageLength = 10, 
+              scrollX = TRUE,
+              lengthChange = FALSE))
+```
+
+Para las SVM polinomial se utilizarán 125 combinaciones de una grilla regular en base a los 3 hiperparámetros que se calibrarán, dichas combinaciones se muestran a continuación:
+
+```{r}
 grilla_svm_poly <- grid_regular(cost(),
                                 degree(),
                                 scale_factor(),
                                 levels = 5)
 
+grilla_svm_poly %>% 
+  datatable(caption = "Combinaciones de parámetros para el modelo de SVM polinomial",
+            options = list(
+              pageLength = 10, 
+              scrollX = TRUE,
+              lengthChange = FALSE))
+```
+
+Para las SVM radiales se utilizarán 121 combinaciones entre los dos hiperparámetros a calibrar:
+
+```{r}
 grilla_svm_rbf <- grid_regular(cost(),
                                rbf_sigma(),
                                levels = 11)
 
+grilla_svm_rbf %>% 
+  datatable(caption = "Combinaciones de parámetros para el modelo de SVM radial",
+            options = list(
+              pageLength = 10, 
+              scrollX = TRUE,
+              lengthChange = FALSE))
+```
+
+Y finalmente para XG Boost por medio de otra grilla regular, se evaluarán 125 combinaciones entre los 3 hiperparámetros a calibrar, utilizando una grilla regular:
+
+```{r}
 grilla_xg <- grid_regular(mtry(range = c(1, 10)),
                           min_n(),
                           trees(),
                           levels = 5)
 
-grilla_svm_lin
-grilla_svm_poly
-grilla_svm_rbf
-grilla_xg
+grilla_xg %>% 
+  datatable(caption = "Combinaciones de parámetros para el modelo de XG Boost",
+            options = list(
+              pageLength = 10, 
+              scrollX = TRUE,
+              lengthChange = FALSE))
 ```
 
 ## Ajuste de hiperparámetros
 
-Se definen los flujos de trabajo y se ajustan los hiperparámetros:
+Para realizar el ajuste de los hiperparámetros se definen los flujos de trabajo del paquete workflows y se procede a aplicar el plan de validación cruzada a las grillas definidas anteriormente, con el fin de obtener las métricas de precisión y de ROC AUC para determinar el desempeño del modelo en las distintas combinaciones:
 
 ```{r}
 flujo_trabajo_svm_lin <- workflow() %>%
@@ -423,39 +521,96 @@ metricas_svm_rbf <- ajuste_hiperparametros_svm_rbf %>%
 
 metricas_xg <- ajuste_hiperparametros_xg %>% 
   collect_metrics()
-
-metricas_svm_lin
-metricas_svm_poly
-metricas_svm_rbf
-metricas_xg
 ```
 
 ## Selección de mejor combinación de hiperparámetros
 
-Se obtiene la combinación de parámetros con la mejor precisión:
+Se decide utilizar la métrica de precisión para determinar cual fué la mejor combinación de parámetros en cada caso, ya que cada combinación de parámetros se ajusta el modelo 10 veces para los 10 distintos pliegues de la validación cruzada, y se obtiene la precisión promedio de esos 10 ajustes. A continuación se muestra la mejor combinación de el modelo de SVM lineal basado en la métrica de precisión:
 
 ```{r}
 mejor_modelo_svm_lin <- ajuste_hiperparametros_svm_lin %>% 
   select_best(metric = "accuracy")
 
+mejor_modelo_svm_lin %>% 
+  select(-.config) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Mejor combinacion de parámetros para SVM lineal"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_svm_lin %>% 
+                                                                                                     inner_join(metricas_svm_lin %>% 
+                                                                                                                  filter(.metric == "accuracy"), by = c("cost")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
+```
+
+Lo mismo para las SVM polinomial:
+
+```{r}
 mejor_modelo_svm_poly <- ajuste_hiperparametros_svm_poly %>% 
   select_best(metric = "accuracy")
 
+mejor_modelo_svm_poly %>% 
+  select(-.config) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Mejor combinacion de parámetros para SVM polinomial"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_svm_poly %>% 
+                                                                                                     inner_join(metricas_svm_poly %>% 
+                                                                                                                  filter(.metric == "accuracy"),
+                                                                                                                by = c("cost", "scale_factor", "degree")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
+```
+
+Las SVM radial:
+
+```{r}
 mejor_modelo_svm_rbf <- ajuste_hiperparametros_svm_rbf %>% 
   select_best(metric = "accuracy")
 
+mejor_modelo_svm_rbf %>% 
+  select(-.config) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Mejor combinacion de parámetros para SVM radial"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_svm_rbf %>% 
+                                                                                                     inner_join(metricas_svm_rbf %>% 
+                                                                                                                  filter(.metric == "accuracy"),
+                                                                                                                by = c("cost", "rbf_sigma")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
+```
+
+Y finalmente para el XG Boost:
+
+```{r}
 mejor_modelo_xg <- ajuste_hiperparametros_xg %>% 
   select_best(metric = "accuracy")
 
-mejor_modelo_svm_lin
-mejor_modelo_svm_poly
-mejor_modelo_svm_rbf
-mejor_modelo_xg
+mejor_modelo_xg %>% 
+  select(-.config) %>% 
+  gt() %>% 
+  tab_header(
+    title = "Mejor combinacion de parámetros para XG Boost"
+  ) %>% 
+  tab_source_note(
+    source_note = paste("La precisión del modelo para esta combinación de hiperparámetros fue de", round(mejor_modelo_xg %>% 
+                                                                                                     inner_join(metricas_xg %>% 
+                                                                                                                  filter(.metric == "accuracy"),
+                                                                                                                by = c("trees", "mtry", "min_n")) %>% 
+                                                                                                     pull(mean), 3)
+    ))
 ```
 
 ## Ajuste del modelo
 
-Y se ajusta el modelo final con los datos de entrenamiento utilizando esta combinación de parámetros:
+Una vez seleccionada la mejor combinación de parámetros se ajustan los modelos con dichas combinaciones al conjunto de datos total:
 
 ```{r}
 flujo_trabajo_svm_lin <- flujo_trabajo_svm_lin %>% 
@@ -494,7 +649,7 @@ modelo_xg_entrenado <- flujo_trabajo_xg %>%
 
 ## Obtención de métricas de desempeño
 
-Y se obtiene las métricas principales con validación cruzada:
+Con dichos modelos ajustados se obtienen las métricas de desempeño de precisión y ROC AUC de cada uno de los 4 modelos y se comparan los resultados de las mismas en el siguiente cuadro:
 
 ```{r}
 # Métricas usando validación cruzada
@@ -539,14 +694,7 @@ indicadores_xg <- metricas_xg %>%
     .metric == "accuracy"  ~ "Precisión",
     .metric == "roc_auc" ~ "ROC AUC"),
     mean = round(mean, 3))
-
-indicadores_svm_lin
-indicadores_svm_poly
-indicadores_svm_rbf
-indicadores_xg
 ```
-
-# Comparacion de métricas de los modelos
 
 La siguiente tabla muestra la comparación de métricas en todos los modelos utilizando validación cruzada y en su estimación final:
 
@@ -566,7 +714,9 @@ indicadores_svm_lin %>%
   )
 ```
 
-Se observa de que el modelo de XG Boost tuvo un mejor desempeño que las distintas variaciones de máquinas de soporte vectorial. Debido a esto, una particularidad y ventaja de los ensambles de árboles es que permiten extraer una medida de importancia de las variables del modelo, que se muestra en el siguiente gráfico:
+Se observa que el modelo de XG Boost tuvo un mejor desempeño que las distintas variaciones de función de núcleo de máquinas de soporte vectorial. La precisión del modelo de XG Boost para predecir tanto los casos que se entregan a tiempo, como no a tiempo, es de un 68,3%. 
+
+Una particularidad y ventaja de los ensambles de árboles como XG Boost es que permiten extraer una medida de importancia de las variables del modelo, que se muestra en el siguiente gráfico:
 
 ```{r}
 modelo_xg_entrenado %>%
