@@ -164,8 +164,9 @@ Se procede a determinar la distribución de las variables de acuerdo con la vari
 
 Primero se analizan las variables categóricas:
 ```{r}
-pilas=function(datos, i, nombre,Y,Y_nombre){
-datos %>% dplyr::group_by({{Y}}, {{i}}) %>% 
+pilas <- function(datos, i, nombre, Y, Y_nombre) {
+datos %>% 
+    dplyr::group_by({{Y}}, {{i}}) %>% 
   count() %>%  
   ggplot(mapping = aes(x = reorder({{i}}, n), y = n, fill = {{Y}})) +
   geom_col(position = "dodge")   + 
@@ -176,10 +177,10 @@ datos %>% dplyr::group_by({{Y}}, {{i}}) %>%
     labs(x=nombre, y="Cantidad", fill=Y_nombre)
 }
 
-p1=pilas(datos, warehouse_block , "Bloque de Almacén", reached_on_time,"Entregado a Tiempo")
-p3=pilas(datos, mode_of_shipment, "Modo de Envío",reached_on_time,"Entregado a Tiempo")
-p4=pilas(datos, product_importance , "Importancia del Producto",reached_on_time,"Entregado a Tiempo")
-p5=pilas(datos, gender, "Género",reached_on_time,"Entregado a Tiempo")
+p1 = pilas(datos, warehouse_block , "Bloque de Almacén", reached_on_time, "Entregado a Tiempo")
+p3 = pilas(datos, mode_of_shipment, "Modo de Envío",reached_on_time,"Entregado a Tiempo")
+p4 = pilas(datos, product_importance , "Importancia del Producto",reached_on_time,"Entregado a Tiempo")
+p5 = pilas(datos, gender, "Género",reached_on_time,"Entregado a Tiempo")
 grid.arrange(
   p1,
   p3,
@@ -192,7 +193,7 @@ Al analizar las variables categóricas con respecto a los valores de la variable
 
 Segundo se analizan las variables numéricas:
 ```{r}
-gviolin=function(data, predictoras,nombre_predictoras,Y, Y_nombre){
+gviolin <- function(data, predictoras, nombre_predictoras,Y, Y_nombre) {
     ggplot(mapping = aes(x = {{Y}}, y = {{predictoras}}, fill = {{Y}} ), data = data) +
     geom_violin(show.legend = FALSE) +
     geom_boxplot(width = 0.1, show.legend = FALSE)  + 
@@ -202,12 +203,12 @@ gviolin=function(data, predictoras,nombre_predictoras,Y, Y_nombre){
     labs(y=nombre_predictoras, x=Y_nombre)
 }
 
-v1=gviolin(datos, customer_care_calls,"Llamadas de atención al cliente",reached_on_time, "Entregado a Tiempo")
-v3=gviolin(datos, customer_rating,"Calificación del Cliente",reached_on_time, "Entregado a Tiempo")
-v4=gviolin(datos, cost_of_the_product,"Costo del Producto",reached_on_time, "Entregado a Tiempo")
-v5=gviolin(datos, prior_purchases,"Compras Previas",reached_on_time, "Entregado a Tiempo")
-v6=gviolin(datos, weight_in_gms, "Peso",reached_on_time, "Entregado a Tiempo")
-v7=gviolin(datos, discount_offered, "Descuento Ofrecido",reached_on_time, "Entregado a Tiempo")
+v1 <- gviolin(datos, customer_care_calls,"Llamadas de atención al cliente",reached_on_time, "Entregado a Tiempo")
+v3 <- gviolin(datos, customer_rating,"Calificación del Cliente",reached_on_time, "Entregado a Tiempo")
+v4 <- gviolin(datos, cost_of_the_product,"Costo del Producto",reached_on_time, "Entregado a Tiempo")
+v5 <- gviolin(datos, prior_purchases,"Compras Previas",reached_on_time, "Entregado a Tiempo")
+v6 <- gviolin(datos, weight_in_gms, "Peso",reached_on_time, "Entregado a Tiempo")
+v7 <- gviolin(datos, discount_offered, "Descuento Ofrecido",reached_on_time, "Entregado a Tiempo")
 grid.arrange(
   v1,
   v3,
@@ -233,16 +234,16 @@ data %>%
 }
 
 
-r1 = resumen(datos, customer_care_calls, reached_on_time)
-r2 = resumen(datos, customer_rating, reached_on_time)
-r3 = resumen(datos, cost_of_the_product, reached_on_time)
-r4 = resumen(datos, prior_purchases, reached_on_time)
-r5 = resumen(datos, weight_in_gms, reached_on_time)
-r6 = resumen(datos, discount_offered, reached_on_time)
-rsumary = rbind(r1, r2, r3, r4, r5, r6)
-rsumary = rsumary %>% 
+r1 <- resumen(datos, customer_care_calls, reached_on_time)
+r2 <- resumen(datos, customer_rating, reached_on_time)
+r3 <- resumen(datos, cost_of_the_product, reached_on_time)
+r4 <- resumen(datos, prior_purchases, reached_on_time)
+r5 <- resumen(datos, weight_in_gms, reached_on_time)
+r6 <- resumen(datos, discount_offered, reached_on_time)
+rsumary <- rbind(r1, r2, r3, r4, r5, r6)
+rsumary <- rsumary %>% 
   rename("Entregado a Tiempo" = 1)
-rsumary = rsumary %>% 
+rsumary <- rsumary %>% 
   mutate(Variable = rep(
     c(
       "Llamadas de atención al cliente",
