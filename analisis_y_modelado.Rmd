@@ -20,7 +20,7 @@ editor_options:
 # Cargar paquetes
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 # Carga de paquetes ------------------------------------------------------------
 library(tidyverse)
 library(tidymodels)
@@ -250,7 +250,7 @@ En la figura se logra observar que la variable objetivo independientemente del v
 La siguiente tabla contiene un resumen por variable según la categoría de la variable objetivo, la cual ayuda a verificar los resultados obtenidos de las figuras:
 
 ```{r}
-resumen <- function(data, predictora,Y){
+resumen <- function(data, predictora, Y){
 data %>%
   group_by({{Y}}) %>%
   summarise(min = min({{predictora}}),
@@ -305,7 +305,7 @@ Por otro lado, las variables de peso y descuento ofrecido se comportan de manera
 
 Para la parte de modelado se crearán modelos de clasificación, donde la variable respuesta es si el producto fue entregado a tiempo o no, y las variables predictoras, se utilizarán todas las exploradas, ya que interesa tener la mayor capacidad de clasificación satisfactoria.
 
-Para lo modelos de clasificiación se pondrán a competir 3 variaciones de las máquinas de soporte vectorial (SVM), utilizando 3 funciones de núcleo distintas, la lineal, la polinomial y la radial. Adicionalmente como cuarto modelo se realizará un ensamble de árboles que es un método más reciente, potente y ampliamente utilizado que se llama XG Boost.
+Para lo modelos de clasificación se pondrán a competir 3 variaciones de las máquinas de soporte vectorial (SVM), utilizando 3 funciones de núcleo distintas, la lineal, la polinomial y la radial. Adicionalmente como cuarto modelo se realizará un ensamble de árboles que es un método más reciente, potente y ampliamente utilizado que se llama XG Boost.
 
 Las SVM lineales intentan separar las clases (en este caso si el prooducto se entregó a tiempo o no en) en una línea recta o plano, mientras que la función de núcleo polinomial y radial permite realizar separaciones de las clases no lineales más complejas, en donde la radial es capaz de hacer separaciones no lineales más complejas, ya que la función permite capturar estructuras más intrincadas en los datos, así que es especialmente útil cuando no se conoce la forma exacta de separación de los datos, como el presente caso.
 
