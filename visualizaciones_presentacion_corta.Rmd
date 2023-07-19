@@ -166,7 +166,20 @@ datos %>%
              labeller = labeller(customer_rating=label_both))+
   labs(x="Número de compras previas del cliente")
 ```
+```{r}
+average_ratings <- aggregate(customer_rating ~ reached_on_time + customer_care_calls, datos, mean)
 
+average_ratings%>% 
+ggplot(aes(x = customer_rating, y = reached_on_time, fill = customer_rating)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis(option = "D", end = 0.8) +
+  facet_wrap(~customer_care_calls, ncol = 2, labeller = labeller(customer_rating = label_both)) +
+  xlab("Puntuacion media del cliente") +
+  ylab("Tiempo de Llegada") +
+  ggtitle("Puntuación del cliente de acuerdo a la cantidad de llamadas hechas con anterioridad") +
+  labs(fill = "Average Rating")
+
+```
 
 ```{r}
 xgb.plot.tree(model = modelo_xg_entrenado$fit, trees = 0, plot_width = 1000, plot_height = 1000)
