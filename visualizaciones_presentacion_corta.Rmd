@@ -87,11 +87,13 @@ datos %>%
                    fill = reached_on_time),
                col = NA,
                alpha = 0.75) +
-  scale_fill_viridis_d(end = 0.8) +
+  scale_fill_viridis_d(end = 0.8, 
+                       name = "Tiempo de LLegada") +
   facet_grid(product_importance~mode_of_shipment) +
   theme(axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank())+labs(x="Costo del Producto")
+
 ```
 
 
@@ -104,11 +106,12 @@ datos %>%
                    fill = reached_on_time),
                col = NA,
                alpha = 0.75) +
-  scale_fill_viridis_d(end = 0.8) +
+  scale_fill_viridis_d(end = 0.8, 
+                       name = "Tiempo de LLegada") +
   facet_grid(product_importance~mode_of_shipment) +
   theme(axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank())+labs(x="Peso en grms")
 ```
 
 Independientemente de la cantidad de veces que ha solicitado el cliente el servicio, el mismo puede ser entregado a tiempo o no. 
@@ -131,19 +134,18 @@ datos$precio_cat <- cut(datos$cost_of_the_product, breaks = cutoffs, labels = c(
 
 datos %>% 
   ggplot() +
-  geom_boxplot(aes(x = reached_on_time,
-                   y =discount_offered,
-                   fill=reached_on_time)) +
-   scale_fill_viridis_d(end = 0.8, alpha = 0.7)+
-  facet_grid(~precio_cat, scales = "free") +
-  labs(y="Descuento Ofrecido", x="Entregado a Tiempo")+
-  theme(
-      legend.position="none",
-      plot.title = element_text(size=11)
-    ) +
-    ggtitle("Entrega a Tiempo de acuerdo con el descuento ofrecido y con el precio del producto") +
-    xlab("")
-
+  geom_density(aes(x = discount_offered,
+                   fill = reached_on_time),
+               col = NA,
+               alpha = 0.75) +
+  scale_fill_viridis_d(end = 0.8, 
+                       name = "Tiempo de LLegada") +
+  facet_grid(~precio_cat) +
+    ggtitle("Tiempo de entrega de acuerdo con el descuento ofrecido y con el precio del producto") +
+    ylab("")+labs(x="Descuento Ofrecido")+
+    theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
 ```
 
 Valdría la pena invertir un esfuerzo extra en entregar a tiempo a aquellos clientes con buena calificación y con refrecuencias altas?
@@ -154,7 +156,8 @@ datos %>%
   ggplot(aes(x = prior_purchases),
          binwidth = 1) + 
   geom_histogram(mapping = aes(fill = reached_on_time)) + 
-  scale_fill_viridis_d(end = 0.8) +
+  scale_fill_viridis_d(end = 0.8, 
+                       name = "Tiempo de LLegada") +
   labs(title = "Cantidad de envíos por entrega a tiempo",
        x = "prior_purchases",
        y = "Cantidad") +
