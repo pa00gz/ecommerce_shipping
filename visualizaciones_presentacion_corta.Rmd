@@ -163,7 +163,8 @@ datos %>%
        y = "Cantidad") +
   facet_wrap(~customer_rating, 
              ncol = 2,
-             labeller = labeller(customer_rating=label_both))
+             labeller = labeller(customer_rating=label_both))+
+  labs(x="Número de compras previas del cliente")
 ```
 
 
