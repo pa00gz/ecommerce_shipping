@@ -31,6 +31,15 @@ library(xgboost)
 library(PerformanceAnalytics)
 library(DiagrammeR)
 library(viridis)
+
+
+# Lectura de datos -------------------------------------------------------------
+datos <- read_csv("datos/datos.csv") %>% 
+  clean_names() %>% 
+  rename(reached_on_time = reached_on_time_y_n) %>% 
+  mutate(across(.cols = where(is.character),
+                .fns = as.factor),
+         reached_on_time = as.factor(reached_on_time)) 
 ```
 
 La entrega tardía de productos no diferencia entre buenos y malos clientes.

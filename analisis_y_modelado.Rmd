@@ -127,7 +127,7 @@ tibble(
 Se cargan los datos y se define la variables objetivo como factor.
 
 ```{r}
-datos <- read_csv("datos/Train.csv") %>% 
+datos <- read_csv("datos/datos.csv") %>% 
   clean_names() %>% 
   rename(reached_on_time = reached_on_time_y_n) %>% 
   mutate(across(.cols = where(is.character),
