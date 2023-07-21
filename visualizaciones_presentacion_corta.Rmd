@@ -44,9 +44,9 @@ datos <- read_csv("datos/datos.csv") %>%
 
 La entrega tardía de productos no diferencia entre buenos y malos clientes.
 
-Es preocupante que casi el 40% de los envíos sean tardíos incluso en los clientes mejor calificados
+Es preocupante que casi el 60% de los envíos sean tardíos incluso en los clientes mejor calificados
 
-El gráfico refleja que no hay un esfuerzo especial por entregar a tiempo a los clientes mejores calificados, así como tampoco lo hay para que, mediante mejores entregas los clientes peos calificados mejores tras recibir un mejor servicio.
+El gráfico refleja que no hay un esfuerzo especial por entregar a tiempo a los clientes mejores calificados, así como tampoco lo hay para que, mediante mejores entregas los clientes peor calificados mejores tras recibir un mejor servicio.
 
 ```{r pressure, echo=FALSE}
 datos %>% 
@@ -66,7 +66,7 @@ datos %>%
         panel.grid = element_blank())
 ```
 La primera interrogante que puede surgir es: ¿El medio de transporte influye en que un producto sea entregado a tiempo?
-En general se observa que los porcentages asociados a los medios de transporte son similares entre ellos (en donde la entrega a distiempo ronda en los tres en un 40%), por lo que se concluye que los medios de transporte no influyen en las entregas a tiempo o a distiempo.
+En general se observa que los porcentages asociados a los medios de transporte son similares entre ellos (en donde la entrega a distiempo ronda en los tres en un 60%), por lo que se concluye que los medios de transporte no influyen en las entregas a tiempo o a distiempo.
 
 ```{r}
 datos %>% 
@@ -104,29 +104,11 @@ datos %>%
         axis.title.y = element_blank())+labs(x="Costo del Producto")
 
 ```
+Respondiendo a la pregunta planteada anteriormente y relacionando el precio del producto con el posible descuento ofrecido para el mismo:​
 
+Se observa como los productos con un precio alto son los que más tarde tienden a llegar, en comparación con los productos de precio bajo y medio.​
 
-El siguiente gráfico muestra como entre más peso tiene el artículo más tiende a llegar tarde, independientemente de su forma de entrega y su importancia
-
-```{r pressure, echo=FALSE}
-datos %>% 
-  ggplot() +
-  geom_density(aes(x = weight_in_gms,
-                   fill = reached_on_time),
-               col = NA,
-               alpha = 0.75) +
-  scale_fill_viridis_d(end = 0.8, 
-                       name = "Tiempo de LLegada") +
-  facet_grid(product_importance~mode_of_shipment) +
-  theme(axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.title.y = element_blank())+labs(x="Peso en grms")
-```
-
-Independientemente de la cantidad de veces que ha solicitado el cliente el servicio, el mismo puede ser entregado a tiempo o no. 
-
-Del mismo modo, resulta interesante ver cómo aquellos productos, para los cuales el descuento ofrecido es mayor, tienden a llegar de manera tardía con más frecuencia, mientras que aquellos productos para los cuales el descuento ofrecido es menor llegan a tiempo con más frecuencia.
-Además, al compararlos con el precio de los productos se nota que esta situación es más marcado para aquellos productos con precios medios y bajos. Sin embargo, para quellos productos de precio alto la situación es más pareja entre el tiempo de llegada y el descuento (sin embargo, se debe observar que existen punto extremos que debería ser estudiados de manera independiente).
+Por su parte, el descuento ofrecido ronda en el mismo rango indiferentemente del precio del producto, y esto por tanto no afecta en su llegada tardía
 
 ```{r pressure, echo=FALSE}
 #Se divide hace el costo del producot en una variable categórica de 3 categorías:
@@ -157,10 +139,27 @@ datos %>%
         axis.title.y = element_blank())
 ```
 
+El siguiente gráfico muestra como entre menos peso tiene el artículo más tiende a llegar tarde, independientemente de su forma de entrega y su importancia.
+
+```{r pressure, echo=FALSE}
+datos %>% 
+  ggplot() +
+  geom_density(aes(x = weight_in_gms,
+                   fill = reached_on_time),
+               col = NA,
+               alpha = 0.75) +
+  scale_fill_viridis_d(end = 0.8, 
+                       name = "Tiempo de LLegada") +
+  facet_grid(product_importance~mode_of_shipment) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())+labs(x="Peso en grms")
+```
+
 Valdría la pena invertir un esfuerzo extra en entregar a tiempo a aquellos clientes con buena calificación y con refrecuencias altas?
 
+La puntuación dada por los clientes se comporta de manera similar, independientemente del número de compras y llamadas realizadas con anterioridad y del tiempo de llegada del producto​
 ```{r}
-
 datos %>% 
   ggplot(aes(x = prior_purchases),
          binwidth = 1) + 
@@ -189,7 +188,18 @@ ggplot(aes(x = customer_rating, y = reached_on_time, fill = customer_rating)) +
   labs(fill = "Average Rating")
 
 ```
+Modelo:
+Utiliza procesamiento en paralelo, poda de árboles, manejo de valores perdidos y regularización (optimización que penaliza la complejidad de los modelos) para evitar en lo posible sobreajuste o sesgo del modelo.​
 
+Se calibra el número de variables predictoras aleatorias que se utilizarán en los árboles del ensamble, el número mínimo de observaciones para los nodos hoja (y la cantidad de árboles del ensamble)​
+
+Permite extraer una medida de importancia de las variables del modelo​
+
+Las variables que tiene mayor importancia en si el producto se entrega a tiempo o no son:​
+
+1. Descuento ofrecido​
+
+2. Peso en gramos del producto
 ```{r}
 xgb.plot.tree(model = modelo_xg_entrenado$fit, trees = 0, plot_width = 1000, plot_height = 1000)
 
